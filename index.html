@@ -978,7 +978,54 @@
             <div class="card">
                 <div class="search-area">
                     <input type="text" id="myOrderName" placeholder="주문자 이름을 입력하세요">
-                    <button onclick="searchMyOrder()">🔍 검색</button>
+                    <button onclick="searchMyOrder(async function searchMyOrder() {
+            const nameToSearch = document.getElementById('myOrderName').value.trim();
+            const myOrderStatusCard = document.getElementById('myOrderStatusCard');
+            const noOrderMessage = document.getElementById('noOrderMessage');
+
+            if (!nameToSearch) {
+                myOrderStatusCard.classList.add('hidden');
+                noOrderMessage.classList.remove('hidden');
+                noOrderMessage.innerHTML = '<h3>주문자 이름을 입력해주세요.</h3>';
+                return;
+            }
+
+            try {
+                // ✨ 수정: 검색어를 소문자로 변환하여 이름 필드를 기준으로 검색
+                const searchQuery = nameToSearch.toLowerCase();
+                const q = query(ordersRef, orderBy('name'), startAt(searchQuery), endAt(searchQuery + '\uf8ff'), limit(1));
+                const querySnapshot = await getDocs(q);
+
+                if (!querySnapshot.empty) {
+                    const myOrderDoc = querySnapshot.docs[0];
+                    myOrder = { id: myOrderDoc.id, ...myOrderDoc.data() };
+                    
+                    const details = `
+                        <strong>메뉴:</strong> ${myOrder.menu} <span class="temp-badge ${myOrder.temp.toLowerCase()}">${myOrder.temp}</span><br>
+                        <strong>주문자:</strong> ${myOrder.name}<br>
+                        <strong>배달위치:</strong> ${myOrder.location}<br>
+                        <strong>옵션:</strong> ${myOrder.options.join(', ') || '없음'}<br>
+                        <strong>요청사항:</strong> ${myOrder.request || '없음'}
+                    `;
+                    document.getElementById('myOrderDetails').innerHTML = details;
+                    
+                    myOrderStatusCard.classList.remove('hidden');
+                    noOrderMessage.classList.add('hidden');
+
+                    updateProgressBar(myOrder.status);
+                } else {
+                    myOrderStatusCard.classList.add('hidden');
+                    noOrderMessage.classList.remove('hidden');
+                    noOrderMessage.innerHTML = `<h3>'${nameToSearch}'님의 주문 내역이 없습니다.</h3><p>이름을 다시 확인해주세요!</p>`;
+                }
+            } catch (error) {
+                console.error("Error searching for my order: ", error);
+                showToast('❌ 주문 검색에 실패했습니다.');
+                myOrderStatusCard.classList.add('hidden');
+                noOrderMessage.classList.remove('hidden');
+                noOrderMessage.innerHTML = `<h3>주문 검색에 실패했습니다.</h3><p>다시 시도해주세요.</p>`;
+            }
+        })">🔍 검색</button>
                 </div>
             </div>
 
